@@ -706,6 +706,12 @@ AddEventHandler("BLACKJACK:RequestBets", function(index, _timeLeft)
 				selectedBet = tableLimit
 			elseif IsControlJustPressed(1, 202) then -- ESC / B
 				leaveBlackjack()
+				leavingBlackjack = true
+				renderScaleform = false
+				renderTime = false
+				renderBet = false
+				renderHand = false
+				selectedBet = 1		
 				return
 			end
 
@@ -1275,6 +1281,14 @@ Citizen.CreateThread(function()
 	end
 end)
 
+function isNight()
+	local hour = GetClockHours()
+	if hour > 23 or hour < 4 then
+		return true
+	else
+		return false
+	end
+end
 
 function ProcessTables()	
 	RequestAnimDict("anim_casino_b@amb@casino@games@shared@player@")
@@ -1328,6 +1342,7 @@ function ProcessTables()
 						end
 
 						if #(pCoords - coords) < 1.5 and not IsSeatOccupied(coords, 0.5) and canSit then
+							if isNight() then
 							if highStakes then
 								DisplayHelpText("Press ~INPUT_CONTEXT~ to play High-Limit Blackjack.")
 							else
@@ -1479,8 +1494,11 @@ function ProcessTables()
 													standUpCallback()
 												end
 												break									
+												end
 											end
 										end
+										else
+										DisplayHelpText("The casino is ~r~CLOSED ~w~ at the moment.")
 									end
 								end
 							end
