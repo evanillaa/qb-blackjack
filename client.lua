@@ -237,11 +237,11 @@ function s2m(s)
     end
 end
 
-RegisterCommand("bet", function(source, args, rawCommand)
-	if args[1] and _DEBUG == true then
-		TriggerServerEvent("BLACKJACK:SetPlayerBet", g_seat, closestChair, args[1])
-	end
-end, false)
+--RegisterCommand("bet", function(source, args, rawCommand)
+	--if args[1] and _DEBUG == true then
+		--TriggerServerEvent("BLACKJACK:SetPlayerBet", g_seat, closestChair, args[1])
+	--end
+--end, false)
 
 
 spawnedPeds = {}
@@ -290,6 +290,7 @@ Citizen.CreateThread(function()
 				DrawTimerBar(barCount, "SPLIT", handValue(splitHand))
 			end
 			DrawTimerBar(barCount, "HAND", handValue(hand))
+			DrawTimerBar(barCount, "DEALER", dealerValue[g_seat])
 		end
 
 		if _DEBUG == true then
@@ -421,6 +422,7 @@ function IsSeatOccupied(coords, radius)
 end
 
 dealerHand = {}
+dealerValue = {}
 dealerHandObjs = {}
 handObjs = {}
 
@@ -441,9 +443,9 @@ function CreatePeds()
 	end
 	
 	for i,v in pairs(customTables) do
-		local model = `vw_prop_casino_3cardpoker_01`
+		local model = `vw_prop_casino_blckjack_01`
 		if v.highStakes == true then
-			model = `vw_prop_casino_3cardpoker_01`
+			model = `vw_prop_casino_blckjack_01b`
 		end
 		
 		if not HasModelLoaded(model) then
@@ -466,8 +468,17 @@ function CreatePeds()
 	for i,v in pairs(tables) do
 	
 		dealerHand[i] = {}
+		dealerValue[i] = {}
 		dealerHandObjs[i] = {}
-		local model = `s_f_y_casino_01`
+		local models = {
+			`s_f_y_casino_01`,
+			`s_m_y_casino_01`
+		}
+		local model = models[1]
+		
+		if ((i+6) % 13) < 7 then
+			model = models[2]
+		end
 
 		chips[i] = {}
 		
@@ -519,7 +530,7 @@ AddEventHandler("BLACKJACK:PlayDealerAnim", function(i, animDict, anim)
 		end
 		DebugPrint("PLAYING "..anim:upper().." ON DEALER "..i)
 		local scene = CreateSynchronizedScene(v.coords.x, v.coords.y, v.coords.z, 0.0, 0.0, v.coords.w, 2)
-		TaskSynchronizedScene(spawnedPeds[i], scene, animDict, anim, 1000.0, -8.0, 4, 1, 1148846080, 0)
+		TaskSynchronizedScene(spawnedPeds[i], scene, animDict, anim, 8.0, 8.0, 4, 1, 1148846080, 0)
 	
 	end)
 end)
@@ -685,7 +696,7 @@ AddEventHandler("BLACKJACK:RequestBets", function(index, _timeLeft)
 
 		BeginScaleformMovieMethod(scaleform, "SET_DATA_SLOT")
 		ScaleformMovieMethodAddParamInt(2)
-		ScaleformMovieMethodAddParamPlayerNameString(GetControlInstructionalButton(1, 205, 0))
+		ScaleformMovieMethodAddParamPlayerNameString(GetControlInstructionalButton(1, 204, 0))
 		ScaleformMovieMethodAddParamPlayerNameString("Max Bet")
 		EndScaleformMovieMethod()
 
@@ -706,6 +717,12 @@ AddEventHandler("BLACKJACK:RequestBets", function(index, _timeLeft)
 				selectedBet = tableLimit
 			elseif IsControlJustPressed(1, 202) then -- ESC / B
 				leaveBlackjack()
+				leavingBlackjack = true
+				renderScaleform = false
+				renderTime = false
+				renderBet = false
+				renderHand = false
+				selectedBet = 1		
 				return
 			end
 
@@ -1133,6 +1150,11 @@ AddEventHandler("BLACKJACK:RetrieveCards", function(i, seat)
 	end
 end)
 
+RegisterNetEvent("BLACKJACK:UpdateDealerHand")
+AddEventHandler("BLACKJACK:UpdateDealerHand", function(i, v)
+	dealerValue[i] = v
+end)
+
 function DrawText3D(x, y, z, text)
 	SetTextScale(0.35, 0.35)
     SetTextFont(4)
@@ -1287,10 +1309,14 @@ function ProcessTables()
 				
 				if #(GetEntityCoords(PlayerPedId()) - vector3(cord.x, cord.y, cord.z)) < 3.0 then
 					local pCoords = GetEntityCoords(PlayerPedId())
-					local tableObj = GetClosestObjectOfType(pCoords, 1.0, `vw_prop_casino_3cardpoker_01`, false, false, false)
+					local tableObj = 0
 					
-					if GetEntityCoords(tableObj) == vector3(0.0, 0.0, 0.0) then
-						tableObj = GetClosestObjectOfType(pCoords, 1.0, `vw_prop_casino_3cardpoker_01`, false, false, false)
+					for i = 1 , #TableModels do
+						local model = TableModels[i]
+						tableObj = GetClosestObjectOfType(pCoords, 1.0, model, false, false, false)
+						if GetEntityCoords(tableObj) ~= vector3(0.0, 0.0, 0.0) then
+							break
+						end
 					end
 					
 					if GetEntityCoords(tableObj) ~= vector3(0.0, 0.0, 0.0) then
@@ -1493,8 +1519,7 @@ function ProcessTables()
 end
 
 Citizen.CreateThread(function()
-	-- if IsModelInCdimage(`vw_prop_casino_blckjack_01`) and IsModelInCdimage(`s_f_y_casino_01`) and IsModelInCdimage(`vw_prop_chip_10dollar_x1`) then
-	if IsModelInCdimage(`vw_prop_casino_3cardpoker_01`) and IsModelInCdimage(`s_f_y_casino_01`) then
+	if IsModelInCdimage(`vw_prop_casino_blckjack_01`) and IsModelInCdimage(`s_f_y_casino_01`) and IsModelInCdimage(`vw_prop_chip_10dollar_x1`) then
 		Citizen.CreateThread(ProcessTables)
 		Citizen.CreateThread(CreatePeds)
 	else
