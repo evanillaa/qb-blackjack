@@ -216,6 +216,22 @@ end
 RegisterServerEvent("BLACKJACK:CheckPlayerBet")
 AddEventHandler("BLACKJACK:CheckPlayerBet", CheckPlayerBet)
 
+function SortPlayers(pTable)
+    local temp
+
+    for i=1,#pTable-1 do
+        for j=i+1,#pTable do
+            if pTable[i].seat < pTable[j].seat then
+                temp = pTable[i]
+                pTable[i] = pTable[j]
+                pTable[j] = temp
+            end
+        end
+    end
+
+    return pTable
+end
+
 RegisterServerEvent("BLACKJACK:ReceivedMove")
 
 function StartTableThread(i)
@@ -266,7 +282,10 @@ function StartTableThread(i)
 						local currentPlayers = {table.unpack(players[i])}
 						local deck = getDeck()
 						local dealerHand = {}
+						local dealerVisibleHand = {}
+						TriggerClientEvent("BLACKJACK:UpdateDealerHand", -1, index, handValue(dealerVisibleHand))
 						
+						currentPlayers = SortPlayers(currentPlayers)						
 						local gameRunning = true
 						
 						Wait(1500)
@@ -283,10 +302,12 @@ function StartTableThread(i)
 							else
 								PlayDealerAnim(index, "anim_casino_b@amb@casino@games@blackjack@dealer", "female_deal_card_self_second_card")
 								DebugPrint("TABLE "..index..": DEALT DEALER "..card)
+								table.insert(dealerVisibleHand, card)	
 							end
 							Wait(2000)
-		
-							if #dealerHand > 1 then
+							TriggerClientEvent("BLACKJACK:UpdateDealerHand", -1, index, handValue(dealerVisibleHand))
+							
+								if #dealerHand > 1 then
 								PlayDealerSpeech(index, "MINIGAME_BJACK_DEALER_"..cardValue(dealerHand[2]))
 							end
 							
@@ -320,10 +341,11 @@ function StartTableThread(i)
 						if handValue(dealerHand) == 21 then
 							DebugPrint("TABLE "..index..": DEALER HAS BLACKJACK")
 							PlayDealerAnim(index, "anim_casino_b@amb@casino@games@blackjack@dealer", "female_check_and_turn_card")
+							dealerVisibleHand = dealerHand
 							Wait(2000)
 							PlayDealerSpeech(index, "MINIGAME_BJACK_DEALER_BLACKJACK")
 							TriggerClientEvent("BLACKJACK:DealerTurnOverCard", -1, index)
-
+							TriggerClientEvent("BLACKJACK:UpdateDealerHand", -1, index, handValue(dealerVisibleHand))
 							for i,v in pairs(currentPlayers) do
 								TriggerClientEvent("BLACKJACK:GameEndReaction", v.player, "bad")
 							end
